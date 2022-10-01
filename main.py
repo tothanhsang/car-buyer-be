@@ -1,10 +1,14 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from db import engine, get_db
 import uvicorn
+
+import cloudinary
+import cloudinary.uploader
 
 from sql_app import models
 from sql_app.crud import ItemRepo, StoreRepo
@@ -14,6 +18,14 @@ import sql_app.schemas as schemas
 app = FastAPI(title="Sample FastAPI Application",
 description = "Sample FastAPI Application with Swagger and Sqlalchemy",
 version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -110,34 +122,11 @@ def get_all_stores(name: Optional[str]=None, db: Session=Depends(get_db)):
   else:
     return StoreRepo.fetch_all(db)
 
-from fastapi import File, UploadFile
-from fastapi.responses import HTMLResponse
-
-@app.post("/files/")
-async def create_files(files: List[bytes] = File()):
-    return {"file_sizes": [len(file) for file in files]}
-
-
-@app.post("/uploadfiles/")
-async def create_upload_files(files: List[UploadFile]):
-    return {"filenames": [file.filename for file in files]}
-
-
-@app.get("/")
-async def main():
-    content = """
-<body>
-<form action="/files/" enctype="multipart/form-data" method="post">
-<input name="files" type="file" multiple>
-<input type="submit">
-</form>
-<form action="/uploadfiles/" enctype="multipart/form-data" method="post">
-<input name="files" type="file" multiple>
-<input type="submit">
-</form>
-</body>
-    """
-    return HTMLResponse(content=content)
+@app.post("/posts/",status_code=status.HTTP_201_CREATED)
+def create_post(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    result = cloudinary.uploader.upload(file.file)
+    url = result.get("url")
+    print("url: ", url)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", port=9000, reload=True)
