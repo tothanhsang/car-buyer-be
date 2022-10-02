@@ -6,6 +6,6 @@
 ### 4. Angular https://vercel.com/dashboard.
 ## You can review my project via Domain:
 ### 1. FastAPI: https://car-buyer-rhnlebzl0-tothanhsang.vercel.app/docs
-### 1. Angular App: https://car-buyer-daqcujbai-tothanhsang.vercel.app
+### 2. Angular App: https://car-buyer-daqcujbai-tothanhsang.vercel.app
 
 #### If you want run local pls replace varibale in .env file
