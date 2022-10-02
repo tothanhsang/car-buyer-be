@@ -1,32 +1,36 @@
 from typing import List, Optional
 from pydantic import BaseModel
 
-# Schemas Item
-class ItemBase(BaseModel):
+# Schemas Car Model
+class CarModelBase(BaseModel):
   name: str
-  price: float
   description: Optional[str] = None
+  car_brand_id: int
 
-class ItemCreate(ItemBase):
+class CarModelCreate(CarModelBase):
   pass
 
-class Item(ItemBase):
+class CarModel(CarModelBase):
   id: int
-  store_id: int
 
   class Config:
     orm_mode = True
 
-# Schemas Store
-class StoreBase(BaseModel):
+# Schemas Car Brand
+class CarBrandBase(BaseModel):
   name: str
+  img_url: str
+  description: Optional[str] = None
+  status: bool
+  last_update: str
+  number_model: int
 
-class StoreCreate(StoreBase):
+class CarBrandCreate(CarBrandBase):
   pass
 
-class Store(StoreBase):
+class CarBrand(CarBrandBase):
   id: int
-  items: List[Item] = []
+  car_models: List[CarModel] = []
 
   class Config:
     orm_mode = True

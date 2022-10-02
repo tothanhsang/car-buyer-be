@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-env_path = Path('.') / '.env'
+env_path = Path('.') / 'config_db/.env'
 load_dotenv(dotenv_path=env_path)
 
 class Settings:

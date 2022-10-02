@@ -1,17 +1,18 @@
+import datetime
 from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from db import engine, get_db
+from config_db.db import engine, get_db
 import uvicorn
 
 import cloudinary
 import cloudinary.uploader
 
-from sql_app import models
-from sql_app.crud import ItemRepo, StoreRepo
+from sql_app.crud import CarModelRepo, CarBrandRepo
 import sql_app.models as models
 import sql_app.schemas as schemas
 
@@ -34,99 +35,149 @@ def validation_exception_handler(request, err):
   base_error_message = f"Failed to execute: {request.method}: {request.url}"
   return JSONResponse(status_code=400, content={"message": f"{base_error_message}. Detail: {err}"})
 
-# Item
-@app.post('/items', tags=["Item"], response_model=schemas.Item, status_code=201)
-async def create_item(item_request: schemas.ItemCreate, db: Session = Depends(get_db)):
+# Car Model
+@app.post('/car-models', tags=["CarModel"], response_model=schemas.CarModel, status_code=201)
+async def create_car_model(car_model_request: schemas.CarModelCreate, db: Session = Depends(get_db)):
   """
-  Create an Item and Store it in the database
+  Create an CarModel it in the database
   """
-  db_item = ItemRepo.fetch_by_name(db, name=item_request.name)
-  if db_item:
-    raise HTTPException(status_code=400, detail="Item already exists!")
-  db_store = StoreRepo.fetch_by_id(db, item_request.store_id)
-  if db_store is None:
+  db_car_model = CarModelRepo.fetch_by_name(db, name=car_model_request.name)
+  if db_car_model:
+    raise HTTPException(status_code=400, detail="Car Model already exists!")
+  db_car_brand = CarBrandRepo.fetch_by_id(db, car_model_request.car_brand_id)
+  if db_car_brand is None:
     raise HTTPException(status_code=400, detail="Store no exists, pls enter correct store ID!")
-  return await ItemRepo.create(db=db, item=item_request)
+  return await CarModelRepo.create(db=db, car_model=car_model_request)
 
-@app.get('/items', tags=["Item"], response_model=List[schemas.Item])
-def get_all_items(name: Optional[str] = None, db: Session=Depends(get_db)):
+@app.get('/car-models', tags=["CarModel"], response_model=List[schemas.CarModel])
+def get_all_car_models(name: Optional[str] = None, db: Session=Depends(get_db)):
   """
-  Get all the Items stored in database
+  Get all the Car Models stored in database
   """
   if name:
-    items = []
-    db_item = ItemRepo.fetch_by_name(db, name)
-    items.append(db_item)
-    return items
+    car_models = []
+    db_car_model = CarModelRepo.fetch_by_name(db, name)
+    car_models.append(db_car_model)
+    return car_models
   else:
-    return ItemRepo.fetch_all(db)
+    return CarModelRepo.fetch_all(db)
 
-@app.get('/items/{item_id}', tags=["Item,"], response_model=schemas.Item)
-def get_item(item_id: int, db: Session = Depends(get_db)):
+@app.get('/car-models/{car_model_id}', tags=["CarModel"], response_model=schemas.CarModel)
+def get_car_model(car_model_id: int, db: Session = Depends(get_db)):
   """
-   Get the Item with the given ID provided by User stored in database
+   Get the Car Model with the given ID provided by User stored in database
   """
-  db_item = ItemRepo.fetch_by_id(db, item_id)
-  if db_item is None:
+  db_car_model = CarModelRepo.fetch_by_id(db, car_model_id)
+  if db_car_model is None:
+    raise HTTPException(status_code=404, detail="Car Model not found with the given ID")
+  return db_car_model
+
+@app.delete('/car-models/{car_model_id}', tags=["CarModel"])
+async def delete_car_model(car_model_id: int, db: Session=Depends(get_db)):
+  """
+  Delete the Car Model with the given ID provided by User stored in database
+  """
+  db_car_model = CarModelRepo.fetch_by_id(db, car_model_id)
+  if db_car_model is None:
     raise HTTPException(status_code=404, detail="Item not found with the given ID")
-  return db_item
+  await CarModelRepo.delete(db, car_model_id)
+  return "Car Model deleted successfully"
 
-@app.delete('/items/{item_id}', tags=["Item"])
-async def delete_item(item_id: int, db: Session=Depends(get_db)):
+@app.put('/car-models/{car_model_id}', tags=["CarModel"], response_model=schemas.CarModel)
+async def update_car_model(car_model_id: int, car_model_request: schemas.CarModel, db: Session=Depends(get_db)):
   """
-  Delete the Item with the given ID provided by User stored in database
+  Update an Car Model stored in the database
   """
-  db_item = ItemRepo.fetch_by_id(db, item_id)
-  if db_item is None:
-    raise HTTPException(status_code=404, detail="Item not found with the given ID")
-  await ItemRepo.delete(db, item_id)
-  return "Item deleted successfully"
-
-@app.put('/items/{item_id}', tags=["Item"], response_model=schemas.Item)
-async def update_item(item_id: int, item_request: schemas.Item, db: Session=Depends(get_db)):
-  """
-  Update an Item stored in the database
-  """
-  db_item = ItemRepo.fetch_by_id(db, item_id)
-  if db_item:
-    update_item_encoded = jsonable_encoder(item_request)
-    db_item.name = update_item_encoded['name']
-    db_item.price = update_item_encoded['price']
-    db_item.description = update_item_encoded['description']
-    db_item.store_id = update_item_encoded['store_id']
-    return await ItemRepo.update(db=db, item_data=db_item)
+  db_car_model = CarModelRepo.fetch_by_id(db, car_model_id)
+  if db_car_model:
+    update_car_model_encoded = jsonable_encoder(car_model_request)
+    db_car_model.name = update_car_model_encoded['name']
+    db_car_model.description = update_car_model_encoded['description']
+    db_car_model.car_brand_id = update_car_model_encoded['car_brand_id']
+    return await CarModelRepo.update(db=db, car_model_data=db_car_model)
   else:
-    raise HTTPException(status_code=404, detail="Item not found with the given ID")
+    raise HTTPException(status_code=404, detail="Car Model not found with the given ID")
 
 # Store
-@app.post('/stores', tags=["Store"], response_model=schemas.Store, status_code=201)
-async def create_store(store_request: schemas.StoreBase, db: Session = Depends(get_db)):
+@app.post('/car-brands', tags=["CarBrand"], status_code=201)
+async def create_car_brand(
+  name: str = Form(),
+  description: Optional[str] = Form(),
+  status: bool = Form(),
+  last_update: str = Form(),
+  number_model: int = Form(),
+  img_file: Optional[UploadFile] = File(None),
+  db: Session = Depends(get_db)
+):
   """
-  Create an Store and Store it in the database
+  Create an Car Brand it in the database
   """
-  db_store = StoreRepo.fetch_by_name(db, name=store_request.name)
-  if db_store:
-    raise HTTPException(status_code=400, detail="Store already exists!")
-  return await StoreRepo.create(db=db, store=store_request)
+  db_car_brand = CarBrandRepo.fetch_by_name(db, name=name)
+  if db_car_brand:
+    raise HTTPException(status_code=400, detail="Car Brand already exists!")
+  result = cloudinary.uploader.upload(img_file.file)
+  return await CarBrandRepo.create(db=db, name=name, img_url=result.get("url"), description=description, status=status, last_update=last_update, number_model=number_model)
 
-@app.get('/stores', tags=["Store"], response_model=List[schemas.Store])
-def get_all_stores(name: Optional[str]=None, db: Session=Depends(get_db)):
+@app.get('/car-brands', tags=["CarBrand"])
+async def get_all_car_brands(name: Optional[str]=None, db: Session=Depends(get_db)):
   """
-  Get all the Stores stored in database
+  Get all the Car Brands stored in database
   """
   if name:
-    stores = []
-    db_store = StoreRepo.fetch_by_name(db, name)
-    stores.append(db_store)
-    return stores
+    car_brands = []
+    db_car_brand = CarBrandRepo.fetch_by_name(db, name)
+    car_brands.append(db_car_brand)
+    return car_brands
   else:
-    return StoreRepo.fetch_all(db)
+    return CarBrandRepo.fetch_all(db)
 
-@app.post("/posts/",status_code=status.HTTP_201_CREATED)
-def create_post(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    result = cloudinary.uploader.upload(file.file)
-    url = result.get("url")
-    print("url: ", url)
+@app.get('/car-brands/{car_brand_id}', tags=["CarBrand"])
+def get_car_brand(car_brand_id: int, db: Session = Depends(get_db)):
+  """
+   Get the Car Brand with the given ID provided by User stored in database
+  """
+  db_car_brand = CarBrandRepo.fetch_by_id(db, car_brand_id)
+  if db_car_brand is None:
+    raise HTTPException(status_code=404, detail="Car Model not found with the given ID")
+  return db_car_brand
+
+@app.delete('/car-brands/{car_brand_id}', tags=["CarBrand"])
+async def delete_car_model(car_brand_id: int, db: Session=Depends(get_db)):
+  """
+  Delete the Car Brand with the given ID provided by User stored in database
+  """
+  db_car_brand = CarBrandRepo.fetch_by_id(db, car_brand_id)
+  if db_car_brand is None:
+    raise HTTPException(status_code=404, detail="Item not found with the given ID")
+  await CarBrandRepo.delete(db, car_brand_id)
+  return "Car Model deleted successfully"
+
+@app.put('/car-brands/{car_brand_id}', tags=["CarBrand"])
+async def update_car_model(
+  car_brand_id: int, 
+  name: str = Form(),
+  description: Optional[str] = Form(),
+  status: bool = Form(),
+  last_update: str = Form(),
+  number_model: int = Form(),
+  img_file: Optional[UploadFile] = File(None),
+  db: Session=Depends(get_db)
+):
+  """
+  Update an Car Brand stored in the database
+  """
+  db_car_brand = CarBrandRepo.fetch_by_id(db, car_brand_id)
+  if db_car_brand:
+    result = cloudinary.uploader.upload(img_file.file)
+    db_car_brand.name = name
+    db_car_brand.img_url = result.get("url")
+    db_car_brand.description = description
+    db_car_brand.status = status
+    db_car_brand.last_update = last_update
+    db_car_brand.number_model = number_model
+    return await CarBrandRepo.update(db=db, car_band_data=db_car_brand)
+  else:
+    raise HTTPException(status_code=404, detail="Car Model not found with the given ID")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", port=9000, reload=True)
