@@ -127,7 +127,11 @@ async def get_all_car_brands(name: Optional[str]=None, db: Session=Depends(get_d
     car_brands = []
     db_car_brand = CarBrandRepo.fetch_by_name(db, name)
     car_brands.append(db_car_brand)
-    return car_brands
+    if db_car_brand is None:
+      return []
+    else:
+      car_brands.append(db_car_brand)
+      return car_brands
   else:
     return CarBrandRepo.fetch_all(db)
 
@@ -168,13 +172,14 @@ async def update_car_model(
   """
   db_car_brand = CarBrandRepo.fetch_by_id(db, car_brand_id)
   if db_car_brand:
-    result = cloudinary.uploader.upload(img_file.file)
     db_car_brand.name = name
-    db_car_brand.img_url = result.get("url")
     db_car_brand.description = description
     db_car_brand.status = status
     db_car_brand.last_update = last_update
     db_car_brand.number_model = number_model
+    if img_file:
+      result = cloudinary.uploader.upload(img_file.file)
+      db_car_brand.img_url = result.get("url")
     return await CarBrandRepo.update(db=db, car_band_data=db_car_brand)
   else:
     raise HTTPException(status_code=404, detail="Car Model not found with the given ID")
