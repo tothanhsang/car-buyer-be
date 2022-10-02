@@ -126,7 +126,6 @@ async def get_all_car_brands(name: Optional[str]=None, db: Session=Depends(get_d
   if name:
     car_brands = []
     db_car_brand = CarBrandRepo.fetch_by_name(db, name)
-    car_brands.append(db_car_brand)
     if db_car_brand is None:
       return []
     else:
