@@ -8,9 +8,9 @@ import cloudinary
 SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
 
 cloudinary.config( 
-  cloud_name = "dgk4wg0qm", 
-  api_key = "866856679158744", 
-  api_secret = "RpNTOTi9sJmv8XrSjIAwgVdvCIs" 
+  cloud_name = "dzs3cc3sc", 
+  api_key = "555513995258914", 
+  api_secret = "tBf0O15ZIcRTks8aCaWSZJ536Ws" 
 )
 
 engine = create_engine(
